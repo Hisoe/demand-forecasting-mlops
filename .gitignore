@@ -3,8 +3,7 @@ venv/
 __pycache__/
 .pytest_cache/
 
-# Data (Handled by DVC)
-data/
+
 
 # MLflow Model Tracking
 mlruns/

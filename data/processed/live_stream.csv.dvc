@@ -1,0 +1,5 @@
+outs:
+- md5: a1adff95d38d101fd8746e93cef646c3
+  size: 8387171
+  hash: md5
+  path: live_stream.csv
