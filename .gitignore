@@ -7,4 +7,4 @@ __pycache__/
 
 # MLflow Model Tracking
 mlruns/
-.mlflow/
+.mlflow/model_drift_dashboard.html 
