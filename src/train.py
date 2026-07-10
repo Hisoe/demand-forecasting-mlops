@@ -21,7 +21,7 @@ def load_data(file_path: str) -> pd.DataFrame:
     return pd.read_csv(file_path)
 
 def train_and_track():
-    """Trains the XGBoost model and logs all artifacts to MLflow."""
+    """Trains the XGBoost model, tests it, and conditionally registers to MLflow."""
     # 1. Connect to the local MLflow server
     mlflow.set_tracking_uri("http://localhost:5000")
     mlflow.set_experiment("Demand_Forecasting_Baseline")
@@ -55,21 +55,33 @@ def train_and_track():
         model = xgb.XGBRegressor(**params)
         model.fit(X, y)
 
-        # Evaluate the model on the training set (in a real scenario, you'd use a holdout set)
+        # Evaluate the model
         logger.info("Evaluating model performance...")
         predictions = model.predict(X)
         mae = mean_absolute_error(y, predictions)
         rmse = mean_squared_error(y, predictions, squared=False)
 
-        # Log the metrics
+        # Log the metrics to the experiment tracker
         mlflow.log_metric("mae", mae)
         mlflow.log_metric("rmse", rmse)
         logger.info(f"Metrics - MAE: {mae:.4f} | RMSE: {rmse:.4f}")
 
-        # Log the actual model binary (the artifact)
-        mlflow.xgboost.log_model(model, "xgboost-model")
-        
-        logger.info("Model and artifacts successfully logged to MLflow.")
+        # 5. The Quality Gate: Only register if the model is actually good
+        ACCEPTABLE_RMSE = 25.0  # Business threshold
+
+        if rmse < ACCEPTABLE_RMSE:
+            logger.info(f"SUCCESS: Model passed quality gate (RMSE {rmse:.4f} < {ACCEPTABLE_RMSE}). Registering to MLflow.")
+            mlflow.xgboost.log_model(
+                xgb_model=model, 
+                artifact_path="xgboost-model",
+                registered_model_name="Demand_Forecasting_Model"
+            )
+        else:
+            logger.warning(f"FAILED: Model did not meet quality standards (RMSE {rmse:.4f} >= {ACCEPTABLE_RMSE}). Logging without registering.")
+            mlflow.xgboost.log_model(
+                xgb_model=model, 
+                artifact_path="xgboost-model"
+            )
 
 if __name__ == "__main__":
     train_and_track()
