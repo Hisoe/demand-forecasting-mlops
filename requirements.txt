@@ -174,8 +174,8 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-json-logger==4.1.0
 pytz==2023.4
-pywin32==312
-pywinpty==3.0.5
+pywin32==312; sys_platform == 'win32'
+pywinpty==3.0.5; sys_platform == 'win32'
 PyYAML==6.0.3
 pyzmq==27.1.0
 querystring-parser==1.2.4
