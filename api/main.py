@@ -31,7 +31,7 @@ def load_model():
     logger.info("Initializing API and connecting to MLflow...")
     
     # Point to your local MLflow tracking server
-    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_tracking_uri("http://host.docker.internal:5000")
     
     # The Modern Way: Fetching the model via its assigned Alias
     model_uri = "models:/Demand_Forecasting_Model@staging"
