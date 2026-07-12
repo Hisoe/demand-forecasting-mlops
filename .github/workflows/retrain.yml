@@ -33,7 +33,7 @@ jobs:
       - name: Prepare Data (Generate the CSVs)
         run: |
           # Run your preprocessing script here that creates the data
-          python src/preprocess.py
+          python src/etl.py
         
       - name: Debug - List files
         run: ls -R
