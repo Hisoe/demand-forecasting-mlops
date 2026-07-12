@@ -31,7 +31,8 @@ jobs:
           dvc pull
         
       - name: Validate Data
-        run: great_expectations checkpoint run primary_checkpoint
+        run: |
+          great_expectations --config gx/great_expectations.yml checkpoint run primary_checkpoint
         
       - name: Train and Register Model
         env:
