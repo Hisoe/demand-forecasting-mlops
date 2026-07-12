@@ -9,3 +9,15 @@ __pycache__/
 mlruns/
 mlartifacts
 model_drift_dashboard.html 
+
+# Great Expectations generated artifacts
+gx/uncommitted/
+gx/validations/
+gx/data_docs/
+
+# Local configuration secrets (never commit these)
+gx/config_variables.yml
+
+# Local system files
+.DS_Store
+Thumbs.db
