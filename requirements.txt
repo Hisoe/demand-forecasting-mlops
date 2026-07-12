@@ -189,6 +189,7 @@ rich==15.0.0
 rich-click==1.9.8
 rpds-py==2026.6.3
 ruamel.yaml==0.17.17
+setuptools
 scikit-learn==1.4.0
 scipy==1.17.1
 scmrepo==3.6.2
