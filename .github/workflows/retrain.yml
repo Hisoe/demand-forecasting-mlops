@@ -29,7 +29,15 @@ jobs:
         run: | 
           pip install "dvc[s3]"
           dvc pull
+
+      - name: Prepare Data (Generate the CSVs)
+        run: |
+          # Run your preprocessing script here that creates the data
+          python src/preprocess.py
         
+      - name: Debug - List files
+        run: ls -R
+
       - name: Validate Data
         run: |
           great_expectations checkpoint run primary_checkpoint
