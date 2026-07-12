@@ -1,0 +1,4 @@
+['remote "myremote"']
+    url = S3://my-project-dvc-storage-2026
+[core]
+    remote = myremote
