@@ -30,6 +30,9 @@ jobs:
           pip install "dvc[s3]"
           dvc pull
 
+      - name: Debug - List files
+        run: ls -R
+
       - name: Validate Data
         run: |
           great_expectations checkpoint run primary_checkpoint
