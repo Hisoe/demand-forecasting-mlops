@@ -1,45 +1,62 @@
-# src/evidently_monitor.py
 import pandas as pd
+import json
+import logging
+import requests
+import os
+from dotenv import load_dotenv
 from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset, DataQualityPreset
-import logging
 
+load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def generate_drift_report():
-    logger.info("Loading reference and current datasets...")
+def trigger_retrain_pipeline():
+    token = os.getenv("GITHUB_TOKEN")
+    owner = os.getenv("GITHUB_OWNER")
+    repo = os.getenv("GITHUB_REPO")
     
-    # 1. Load the historical training data (Reference)
-    try:
-        reference_data = pd.read_csv("data/processed/baseline_train.csv") 
-    except FileNotFoundError:
-        logger.error("Could not find train.csv. Please ensure the path to your training data is correct.")
-        return
+    url = f"https://api.github.com/repos/{owner}/{repo}/dispatches"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    data = {"event_type": "drift_detected"}
+    
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 204:
+        logger.info("Successfully triggered CI/CD pipeline!")
+    else:
+        logger.error(f"Trigger failed: {response.status_code} - {response.text}")
 
-    # 2. Load the live production data (Current)
-    current_data = pd.read_csv("data/processed/live_stream.csv")
+def generate_drift_report():
+    # 1. Load Data
+    ref = pd.read_csv("data/processed/baseline_train.csv")
+    curr = pd.read_csv("data/processed/live_stream.csv")
+
+    # 2. Setup Report
+    report = Report(metrics=[DataDriftPreset()])
+    report.run(reference_data=ref, current_data=curr)
     
-    # To keep the dashboard fast and readable, we will analyze just Store 1, Item 1
-    ref_sample = reference_data[(reference_data['store'] == 1) & (reference_data['item'] == 1)]
-    curr_sample = current_data[(current_data['store'] == 1) & (current_data['item'] == 1)]
+    # 3. Analyze Results
+    report_dict = report.as_dict()
     
-    logger.info("Generating Evidently AI Drift and Quality Report...")
+    # Calculate percentage of drifting features
+    metrics = report_dict['metrics'][0]['result']
+    num_features = len(metrics['drift_by_columns'])
+    drifted_features = [col for col, data in metrics['drift_by_columns'].items() if data['drift_detected']]
+    drift_share = len(drifted_features) / num_features
     
-    # 3. Initialize the Evidently Report with specific presets
-    drift_report = Report(metrics=[
-        DataQualityPreset(),
-        DataDriftPreset(),
-    ])
-    
-    # 4. Run the statistical calculations
-    drift_report.run(reference_data=ref_sample, current_data=curr_sample)
-    
-    # 5. Save the output as a beautiful interactive HTML dashboard
-    output_file = "model_drift_dashboard.html"
-    drift_report.save_html(output_file)
-    
-    logger.info(f"Success! Dashboard generated and saved as: {output_file}")
+    logger.info(f"Drift share: {drift_share:.2%}")
+
+    # 4. THRESHOLD LOGIC: Trigger only if > 30% of features drift
+    # This prevents 'thrashing' from minor noise
+    if drift_share > 0.30:
+        logger.warning(f"Significant drift detected in {len(drifted_features)} features.")
+        report.save_html("model_drift_dashboard.html")
+        trigger_retrain_pipeline()
+    else:
+        logger.info("Drift is within acceptable limits. No action taken.")
 
 if __name__ == "__main__":
     generate_drift_report()

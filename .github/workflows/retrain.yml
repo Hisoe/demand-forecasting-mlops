@@ -1,0 +1,46 @@
+name: Continuous Training and Deployment
+
+on:
+  repository_dispatch:
+    types: [drift_detected]
+  workflow_dispatch: # Allows manual trigger for testing
+
+jobs:
+  mlops-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install "setuptools<82.0.0" wheel
+          pip install -r requirements.txt
+        
+      - name: Pull Data (DVC)
+        env:
+          GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+        run: dvc pull
+        
+      - name: Validate Data
+        run: great_expectations checkpoint run primary_checkpoint
+        
+      - name: Train and Register Model
+        env:
+          # In production, use a remote MLflow server like DagsHub or a cloud VM
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: python src/train.py
+        
+      - name: Build Docker Container
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/demand-api:latest .
+          
+      - name: Push to Docker Registry
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push ${{ secrets.DOCKER_USERNAME }}/demand-api:latest
