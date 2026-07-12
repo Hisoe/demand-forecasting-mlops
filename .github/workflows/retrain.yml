@@ -32,7 +32,7 @@ jobs:
         
       - name: Validate Data
         run: |
-          great_expectations --config gx/great_expectations.yml checkpoint run primary_checkpoint
+          python src/validate.py
         
       - name: Train and Register Model
         env:
