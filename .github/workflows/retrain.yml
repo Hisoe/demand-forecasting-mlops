@@ -32,7 +32,7 @@ jobs:
         
       - name: Validate Data
         run: |
-          python src/validate.py
+          great_expectations checkpoint run primary_checkpoint
         
       - name: Train and Register Model
         env:
