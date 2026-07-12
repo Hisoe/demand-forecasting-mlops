@@ -94,7 +94,7 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  data_context_id: b14da936-73bc-4ee1-ad07-b89278730977
+  data_context_id: 326d5b5d-e2d8-462f-9c9d-7657bdb3907c
   enabled: true
 fluent_datasources:
   my_pandas_datasource:
@@ -102,13 +102,13 @@ fluent_datasources:
     assets:
       raw_train:
         type: csv
-        filepath_or_buffer: D:\demand-forecasting-mlops\data\raw\train.csv
+        filepath_or_buffer: data\raw\train.csv
       baseline_train:
         type: csv
-        filepath_or_buffer: D:\demand-forecasting-mlops\data\processed\baseline_train.csv
+        filepath_or_buffer: data\processed\baseline_train.csv
       live_stream:
         type: csv
-        filepath_or_buffer: D:\demand-forecasting-mlops\data\processed\live_stream.csv
+        filepath_or_buffer: data\processed\live_stream.csv
 notebooks:
 include_rendered_content:
   globally: false
