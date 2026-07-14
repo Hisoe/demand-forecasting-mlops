@@ -1,3 +1,6 @@
 # .gitattributes
+# Force all yaml files to use LF (Linux) line endings and prevent Git
+# from trying to be "smart" about path/format conversion.
 *.yml text eol=lf
 *.yaml text eol=lf
+.gitattributes -text
