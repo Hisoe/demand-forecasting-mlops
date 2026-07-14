@@ -102,13 +102,13 @@ fluent_datasources:
     assets:
       raw_train:
         type: csv
-        filepath_or_buffer: data\raw\train.csv
+        filepath_or_buffer: data/raw/train.csv
       baseline_train:
         type: csv
-        filepath_or_buffer: data\processed\baseline_train.csv
+        filepath_or_buffer: data/processed/baseline_train.csv
       live_stream:
         type: csv
-        filepath_or_buffer: data\processed\live_stream.csv
+        filepath_or_buffer: data/processed/live_stream.csv
 notebooks:
 include_rendered_content:
   globally: false
