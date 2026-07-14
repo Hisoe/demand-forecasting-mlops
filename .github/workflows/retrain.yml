@@ -40,7 +40,8 @@ jobs:
       - name: Train and Register Model
         env:
           # In production, use a remote MLflow server like DagsHub or a cloud VM
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: python src/train.py
         
       - name: Build Docker Container
