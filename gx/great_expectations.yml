@@ -94,7 +94,7 @@ data_docs_sites:
       class_name: DefaultSiteIndexBuilder
 
 anonymous_usage_statistics:
-  data_context_id: e51e73c2-e7d9-406b-b69b-66ea1b37d542
+  data_context_id: fc2d339b-2c81-4f17-9720-1e9a9fc34c30
   enabled: true
 fluent_datasources:
   my_pandas_datasource:
