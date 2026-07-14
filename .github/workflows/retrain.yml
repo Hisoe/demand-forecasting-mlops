@@ -36,7 +36,19 @@ jobs:
       - name: Validate Data
         run: |
           great_expectations checkpoint run primary_checkpoint
-        
+      
+      - name: Diagnostic Credential Check
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          echo "=== CLI Authentication Debug ==="
+          if [ -z "$DATABRICKS_HOST" ]; then echo "❌ DATABRICKS_HOST is completely empty!"; else echo "✅ DATABRICKS_HOST character count: ${#DATABRICKS_HOST}"; fi
+          if [ -z "$DATABRICKS_TOKEN" ]; then echo "❌ DATABRICKS_TOKEN is completely empty!"; else echo "✅ DATABRICKS_TOKEN character count: ${#DATABRICKS_TOKEN}"; fi
+          
+          echo "=== Testing Network Handshake ==="
+          curl -I -s -o /dev/null -w "HTTP Status from Host: %{http_code}\n" "$DATABRICKS_HOST/api/2.0/preview/mlflow/experiments/get-by-name"    
+
       - name: Train and Register Model
         env:
           # In production, use a remote MLflow server like DagsHub or a cloud VM
