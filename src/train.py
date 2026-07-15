@@ -1,7 +1,7 @@
 import os
 os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
 
-mport pandas as pd
+import pandas as pd
 import xgboost as xgb
 import mlflow
 import mlflow.xgboost
