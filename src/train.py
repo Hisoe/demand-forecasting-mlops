@@ -1,5 +1,4 @@
 import os
-# Force the system to proxy files via the Databricks API instead of direct S3
 os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
 
 import pandas as pd
@@ -25,51 +24,36 @@ def load_data(file_path):
     return pd.read_csv(file_path)
 
 def train_and_track():
-    # 1. Connect to your remote Databricks Workspace
     mlflow.set_tracking_uri("databricks")
-    
-    # 2. Tell MLflow to route models to Unity Catalog
     mlflow.set_registry_uri("databricks-uc")
-    
-    # 3. Define where metrics are logged
     mlflow.set_experiment("/Shared/Demand_Forecasting_Baseline")
 
-    # 4. Strict Unity Catalog 3-part namespace syntax
     registered_model_name = "workspace.default.demand_forecasting_baseline"
 
-    # Load data features
     df = load_data(os.path.join("data", "processed", "baseline_train.csv"))
     X = df[['store', 'item', 'day_of_week', 'month', 'year', 'rolling_7d_sales']]
     y = df['sales']
 
     with mlflow.start_run() as run:
-        logger.info(f"Started MLflow run in Databricks. Run ID: {run.info.run_id}")
+        logger.info(f"Started MLflow run. Run ID: {run.info.run_id}")
         
-        # Initialize and fit XGBoost Regressor
         model = xgb.XGBRegressor(n_estimators=100)
         model.fit(X, y)
         preds = model.predict(X)
         
-        # Calculate metric
         rmse = root_mean_squared_error(y, preds)
         mlflow.log_metric("rmse", rmse)
         
-        logger.info(f"Logging and registering model directly to UC: {registered_model_name}")
-        
-        # Grab a small sample for the schema signature
+        logger.info(f"Logging and registering model: {registered_model_name}")
         input_example = X.head(5)
 
-        # 5. Log and register in one single step
-        # Since we set the MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC="True"
-        # environment variable, MLflow uses the Databricks API to proxy the upload of this model.
         mlflow.xgboost.log_model(
             xgb_model=model,
             artifact_path="model",
             registered_model_name=registered_model_name,
             input_example=input_example
         )
-        
-        logger.info("Successfully registered model under Unity Catalog!")
+        logger.info("Success!")
 
 if __name__ == '__main__':
     train_and_track()

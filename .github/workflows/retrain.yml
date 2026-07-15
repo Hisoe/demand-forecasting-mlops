@@ -52,14 +52,19 @@ jobs:
 
       - name: Train and Register Model
         env:
-          # In production, use a remote MLflow server like DagsHub or a cloud VM
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-          # Force the Databricks SDK to understand we are using a PAT token
-          DATABRICKS_AUTH_TYPE: "pat"
-          # Ensure the proxy is strictly turned on
-          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "True"
-        run: 
+        run: |
+          # 1. Create a mock Databricks config file to force the SDK to activate
+          mkdir -p ~/.databricks
+          echo "[DEFAULT]" > ~/.databrickscfg
+          echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+          echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
+          
+          # 2. Set the routing variable for both MLflow and the SDK
+          export MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC="True"
+          
+          # 3. Execute training
           python src/train.py
         
       - name: Build Docker Container
