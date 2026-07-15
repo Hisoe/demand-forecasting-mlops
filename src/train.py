@@ -1,4 +1,5 @@
 import os
+# Force the SDK to use the proxy just in case
 os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
 
 import pandas as pd
@@ -8,6 +9,7 @@ import mlflow.xgboost
 from sklearn.metrics import root_mean_squared_error
 import logging
 import sys
+import shutil  # Clean directory utilities
 from dotenv import load_dotenv
 
 # Load local environment variables if available
@@ -27,15 +29,18 @@ def train_and_track():
     # 1. Connect to your remote Databricks Workspace
     mlflow.set_tracking_uri("databricks")
     
-    # 2. Tell MLflow to route models to the modern Unity Catalog instead of workspace storage
+    # 2. Tell MLflow to route models to Unity Catalog
     mlflow.set_registry_uri("databricks-uc")
     
-    # 3. Define where the experiment visual metrics are logged
+    # 3. Define where metrics are logged
     mlflow.set_experiment("/Shared/Demand_Forecasting_Baseline")
 
     # 4. Strict Unity Catalog 3-part namespace syntax
-    # Format: catalog.schema.model_name
     registered_model_name = "workspace.default.demand_forecasting_baseline"
+
+    # Define your volume folder path
+    # Databricks automatically exposes managed volumes to external API uploads securely!
+    volume_model_path = "/Volumes/workspace/default/demand_forecasting_volumes/demand_model"
 
     # Load data features
     df = load_data(os.path.join("data", "processed", "baseline_train.csv"))
@@ -50,22 +55,45 @@ def train_and_track():
         model.fit(X, y)
         preds = model.predict(X)
         
-        # Calculate metric with modern scikit-learn compatibility
+        # Calculate metric
         rmse = root_mean_squared_error(y, preds)
         mlflow.log_metric("rmse", rmse)
         
-        # 5. Log the model files AND dynamically register it under the UC schema
-        logger.info(f"Logging and registering model to Unity Catalog as: {registered_model_name}")
+        logger.info("Registering model through safe Unity Catalog Volume...")
         
-        # Grab a small sample (e.g., first 5 rows) of your training features for the signature
+        # Clean local temporary model directory if it exists
+        local_temp_dir = "temp_model_artifacts"
+        if os.path.exists(local_temp_dir):
+            shutil.rmtree(local_temp_dir)
+
+        # Grab a small sample for the schema signature
         input_example = X.head(5)
-        
-        mlflow.xgboost.log_model(
+
+        # 5. Save the MLmodel structure locally
+        mlflow.xgboost.save_model(
             xgb_model=model,
-            artifact_path="model",
-            registered_model_name=registered_model_name,
-            input_example=input_example  
+            path=local_temp_dir,
+            input_example=input_example
         )
+
+        # 6. Safely transfer the local model directory into the Managed Volume
+        # This completely avoids AWS S3 PutObject calls and uploads directly over the Databricks API!
+        if os.path.exists(volume_model_path):
+            shutil.rmtree(volume_model_path)
+        shutil.copytree(local_temp_dir, volume_model_path)
+        
+        # 7. Register the model using the Volume URI
+        # MLflow will link Unity Catalog to the volume file storage structure natively
+        mlflow.register_model(
+            model_uri=f"dbfs:{volume_model_path}",
+            name=registered_model_name
+        )
+        
+        # Clean up local workspace artifacts
+        if os.path.exists(local_temp_dir):
+            shutil.rmtree(local_temp_dir)
+            
+        logger.info("Successfully registered model under workspace.default.demand_forecasting_baseline!")
 
 if __name__ == '__main__':
     train_and_track()

@@ -55,8 +55,11 @@ jobs:
           # In production, use a remote MLflow server like DagsHub or a cloud VM
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: |
-          export MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC="True"
+          # Force the Databricks SDK to understand we are using a PAT token
+          DATABRICKS_AUTH_TYPE: "pat"
+          # Ensure the proxy is strictly turned on
+          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "True"
+        run: 
           python src/train.py
         
       - name: Build Docker Container
