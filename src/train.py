@@ -44,8 +44,13 @@ def train_and_track():
     mlflow.set_tracking_uri("databricks")
     mlflow.set_experiment("/Shared/Demand_Forecasting_Baseline")
 
-    registered_model_name = "workspace.default.demand_forecasting_baseline"
-    volume_model_path = "/Volumes/workspace/default/demand_forecasting_volumes/demand_model"
+    # Catalog & schema configurations
+    catalog_name = "workspace"
+    schema_name = "default"
+    model_name = "demand_forecasting_baseline"
+    registered_model_name = f"{catalog_name}.{schema_name}.{model_name}"
+    
+    volume_model_path = f"/Volumes/{catalog_name}/{schema_name}/demand_forecasting_volumes/demand_model"
 
     df = load_data(os.path.join("data", "processed", "baseline_train.csv"))
     X = df[['store', 'item', 'day_of_week', 'month', 'year', 'rolling_7d_sales']]
@@ -69,10 +74,10 @@ def train_and_track():
         input_example = X.head(5)
         mlflow.xgboost.save_model(xgb_model=model, path=local_temp_dir, input_example=input_example)
 
-        # 2. Safely proxy upload to Databricks Volume (Bypasses S3 firewall)
+        # 2. Safely upload to Databricks Volume (Bypasses S3 firewall)
         upload_directory_to_volume(local_temp_dir, volume_model_path)
 
-        # 3. Use Databricks Server to register the model directly from the Volume
+        # 3. Command the server to register the model directly from the Volume
         logger.info("Commanding Databricks to register model server-side...")
         w = WorkspaceClient()
         
@@ -80,23 +85,27 @@ def train_and_track():
         try:
             w.registered_models.get(full_name=registered_model_name)
         except Exception:
-            w.registered_models.create(
-                catalog_name="workspace",
-                schema_name="default",
-                name="demand_forecasting_baseline"
+            w.registered_models.create_registered_model(
+                catalog_name=catalog_name,
+                schema_name=schema_name,
+                name=model_name
             )
 
-        # Register the version without ever downloading or touching S3 locally!
-        w.model_versions.create(
-            full_name=registered_model_name,
-            source=f"dbfs:{volume_model_path}",
-            run_id=run.info.run_id
+        # Bypass SDK gaps by POSTing directly to the model-versions REST API endpoint
+        logger.info("Triggering Model Versions REST endpoint over API Client...")
+        response = w.api_client.do(
+            method="POST",
+            path="/api/2.0/mlflow/model-versions/create",
+            body={
+                "name": registered_model_name,
+                "source": f"dbfs:{volume_model_path}",
+                "run_id": run.info.run_id
+            }
         )
+        logger.info(f"Successfully registered model version! Response payload: {response}")
 
         if os.path.exists(local_temp_dir):
             shutil.rmtree(local_temp_dir)
-            
-        logger.info("Successfully registered Unity Catalog model, completely bypassing S3!")
 
 if __name__ == '__main__':
     train_and_track()
