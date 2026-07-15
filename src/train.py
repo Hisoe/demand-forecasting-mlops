@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 # Load local environment variables if available
 load_dotenv()
+os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -22,9 +23,6 @@ def load_data(file_path):
     return pd.read_csv(file_path)
 
 def train_and_track():
-    
-    os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "true"
-    
     # 1. Connect to your remote Databricks Workspace
     mlflow.set_tracking_uri("databricks")
     

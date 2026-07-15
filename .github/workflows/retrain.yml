@@ -55,7 +55,7 @@ jobs:
           # In production, use a remote MLflow server like DagsHub or a cloud VM
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "true"
+          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "True"
         run: python src/train.py
         
       - name: Build Docker Container
