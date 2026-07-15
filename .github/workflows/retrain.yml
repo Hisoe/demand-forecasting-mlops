@@ -42,7 +42,6 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "true"
         run: |
           echo "=== CLI Authentication Debug ==="
           if [ -z "$DATABRICKS_HOST" ]; then echo "❌ DATABRICKS_HOST is completely empty!"; else echo "✅ DATABRICKS_HOST character count: ${#DATABRICKS_HOST}"; fi
@@ -56,6 +55,7 @@ jobs:
           # In production, use a remote MLflow server like DagsHub or a cloud VM
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC: "true"
         run: python src/train.py
         
       - name: Build Docker Container
