@@ -20,6 +20,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install "setuptools<82.0.0" wheel
+          pip install --no-cache-dir boto3 botocore mlflow[databricks]
           pip install -r requirements.txt
         
       - name: Pull Data (DVC)
