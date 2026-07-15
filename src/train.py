@@ -1,16 +1,17 @@
-import pandas as pd
+import os
+os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
+
+mport pandas as pd
 import xgboost as xgb
 import mlflow
 import mlflow.xgboost
 from sklearn.metrics import root_mean_squared_error
 import logging
-import os
 import sys
 from dotenv import load_dotenv
 
 # Load local environment variables if available
 load_dotenv()
-os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
