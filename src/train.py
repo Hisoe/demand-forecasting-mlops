@@ -1,6 +1,4 @@
 import os
-os.environ["MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC"] = "True"
-
 import pandas as pd
 import xgboost as xgb
 import mlflow
@@ -8,6 +6,7 @@ import mlflow.xgboost
 from sklearn.metrics import root_mean_squared_error
 import logging
 import sys
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,8 +21,8 @@ def load_data(file_path):
     return pd.read_csv(file_path)
 
 def train_and_track():
+    # 1. Standard MLflow tracking initialization
     mlflow.set_tracking_uri("databricks")
-    mlflow.set_registry_uri("databricks-uc")
     mlflow.set_experiment("/Shared/Demand_Forecasting_Baseline")
 
     registered_model_name = "workspace.default.demand_forecasting_baseline"
@@ -33,8 +32,10 @@ def train_and_track():
     y = df['sales']
 
     with mlflow.start_run() as run:
-        logger.info(f"Started MLflow run. Run ID: {run.info.run_id}")
+        run_id = run.info.run_id
+        logger.info(f"Started MLflow run. Run ID: {run_id}")
         
+        # Train model
         model = xgb.XGBRegressor(n_estimators=100)
         model.fit(X, y)
         preds = model.predict(X)
@@ -42,17 +43,43 @@ def train_and_track():
         rmse = root_mean_squared_error(y, preds)
         mlflow.log_metric("rmse", rmse)
         
-        logger.info(f"Logging and registering model to UC: {registered_model_name}")
+        # 2. Log the model artifacts to the MLflow Run
+        # This works perfectly over the proxy profile we set up!
+        logger.info("Logging model artifacts to the active tracking run...")
         input_example = X.head(5)
-        
-        # This will now successfully proxy the files via HTTPS directly over your mock profile!
         mlflow.xgboost.log_model(
             xgb_model=model,
             artifact_path="model",
-            registered_model_name=registered_model_name,
             input_example=input_example
         )
-        logger.info("Successfully registered model under Unity Catalog!")
+
+        # 3. Server-Side Registration Bypass
+        # We manually call the Databricks Unity Catalog REST API to link this run
+        # into a new version. This completely avoids MLflow's broken S3 versioning client.
+        logger.info(f"Registering model version server-side via REST API: {registered_model_name}")
+        
+        host = os.getenv("DATABRICKS_HOST")
+        token = os.getenv("DATABRICKS_TOKEN")
+        
+        # Clean up trailing slashes from host string if present
+        host = host.rstrip("/")
+        
+        endpoint = f"{host}/api/2.0/mlflow/model-versions/create"
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        
+        payload = {
+            "name": registered_model_name,
+            "source": f"runs:/{run_id}/model",
+            "run_id": run_id
+        }
+        
+        response = requests.post(endpoint, headers=headers, json=payload)
+        
+        if response.status_code == 200:
+            logger.info(f"Successfully registered model version under Unity Catalog! API Response: {response.json()}")
+        else:
+            logger.error(f"Failed to register model version. Status: {response.status_code}, Error: {response.text}")
+            sys.exit(1)
 
 if __name__ == '__main__':
     train_and_track()
