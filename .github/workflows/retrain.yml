@@ -65,7 +65,7 @@ jobs:
           export MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC="True"
           
           # 3. Clean run your standard, native script
-          python src/train.py
+          python src/train_new.py
         
       - name: Build Docker Container
         run: |
