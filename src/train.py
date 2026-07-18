@@ -63,11 +63,9 @@ def train_and_track():
         endpoint = f"{host}/api/2.1/unity-catalog/models/versions"
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         
-        # Split the parts for UC API validation compliance
+        # The exact payload schema accepted by the Unity Catalog 2.1 API
         payload = {
-            "catalog_name": "workspace",
-            "schema_name": "default",
-            "name": "demand_forecasting_baseline",
+            "model_name": registered_model_name,  # <-- The missing required key (workspace.default.demand_forecasting_baseline)
             "source": f"runs:/{run_id}/model",
             "run_id": run_id
         }
