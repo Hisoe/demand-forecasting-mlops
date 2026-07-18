@@ -21,7 +21,7 @@ def load_data(file_path):
     return pd.read_csv(file_path)
 
 def train_and_track():
-    # 1. Standard MLflow tracking initialization
+    # 1. Initialize MLflow tracking to the workspace
     mlflow.set_tracking_uri("databricks")
     mlflow.set_experiment("/Shared/Demand_Forecasting_Baseline")
 
@@ -33,7 +33,7 @@ def train_and_track():
 
     with mlflow.start_run() as run:
         run_id = run.info.run_id
-        logger.info(f"Started MLflow run. Run ID: {run_id}")
+        logger.info(f"Started CLEAN MLflow run. Run ID: {run_id}")
         
         # Train model
         model = xgb.XGBRegressor(n_estimators=100)
@@ -43,8 +43,9 @@ def train_and_track():
         rmse = root_mean_squared_error(y, preds)
         mlflow.log_metric("rmse", rmse)
         
-        # 2. Log artifacts to the run ONLY (We stripped registered_model_name here)
-        logger.info("Logging model artifacts to the active tracking run...")
+        # 2. Log model artifacts to the active run ONLY
+        # Notice: registered_model_name is omitted here to prevent client-side S3 calls
+        logger.info("LOGGING ARTIFACTS TO RUN ONLY - S3 REGISTER BYPASS")
         input_example = X.head(5)
         mlflow.xgboost.log_model(
             xgb_model=model,
@@ -52,14 +53,11 @@ def train_and_track():
             input_example=input_example
         )
 
-        # 3. Handle model registration server-side via direct REST API
-        logger.info(f"Registering model version server-side via REST API: {registered_model_name}")
+        # 3. Request server-side registration over standard HTTPS REST API
+        logger.info(f"Requesting Databricks to register model server-side: {registered_model_name}")
         
-        host = os.getenv("DATABRICKS_HOST")
+        host = os.getenv("DATABRICKS_HOST").rstrip("/")
         token = os.getenv("DATABRICKS_TOKEN")
-        
-        # Clean up trailing slashes from host string if present
-        host = host.rstrip("/")
         
         endpoint = f"{host}/api/2.0/mlflow/model-versions/create"
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -73,9 +71,9 @@ def train_and_track():
         response = requests.post(endpoint, headers=headers, json=payload)
         
         if response.status_code == 200:
-            logger.info(f"Successfully registered model version under Unity Catalog! API Response: {response.json()}")
+            logger.info(f"Success! Registered model version server-side: {response.json()}")
         else:
-            logger.error(f"Failed to register model version. Status: {response.status_code}, Error: {response.text}")
+            logger.error(f"Server registration failed: Status {response.status_code}, Error: {response.text}")
             sys.exit(1)
 
 if __name__ == '__main__':
