@@ -53,25 +53,29 @@ def train_and_track():
             input_example=input_example
         )
 
-        # 3. Request server-side registration over standard HTTPS REST API
-        logger.info(f"Requesting Databricks to register model server-side: {registered_model_name}")
+        # 3. Handle model registration server-side via direct Unity Catalog REST API
+        logger.info(f"Requesting Databricks to register model server-side in Unity Catalog: {registered_model_name}")
         
         host = os.getenv("DATABRICKS_HOST").rstrip("/")
         token = os.getenv("DATABRICKS_TOKEN")
         
-        endpoint = f"{host}/api/2.0/mlflow/model-versions/create"
+        # Target the explicit Unity Catalog model versions endpoint
+        endpoint = f"{host}/api/2.1/unity-catalog/models/versions"
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         
+        # Split the parts for UC API validation compliance
         payload = {
-            "name": registered_model_name,
+            "catalog_name": "workspace",
+            "schema_name": "default",
+            "name": "demand_forecasting_baseline",
             "source": f"runs:/{run_id}/model",
             "run_id": run_id
         }
         
         response = requests.post(endpoint, headers=headers, json=payload)
         
-        if response.status_code == 200:
-            logger.info(f"Success! Registered model version server-side: {response.json()}")
+        if response.status_code == 200 or response.status_code == 201:
+            logger.info(f"Success! Registered model version in Unity Catalog: {response.json()}")
         else:
             logger.error(f"Server registration failed: Status {response.status_code}, Error: {response.text}")
             sys.exit(1)
