@@ -53,28 +53,23 @@ def train_and_track():
             input_example=input_example
         )
 
-        # 3. Handle model registration server-side via direct Databricks REST API
-        logger.info(f"Registering model version via universal MLflow endpoint: {registered_model_name}")
+        # 3. Handle model registration server-side via direct Unity Catalog MLflow REST API
+        logger.info(f"Registering Unity Catalog model version via server-side routing: {registered_model_name}")
         
         host = os.getenv("DATABRICKS_HOST").rstrip("/")
         token = os.getenv("DATABRICKS_TOKEN")
         
-        # The correct universal endpoint mapping for model versions
-        endpoint = f"{host}/api/2.0/mlflow/model-versions/create"
+        # CORRECT ROUTE: Explicitly path via /unity-catalog/ to accept three-part names
+        endpoint = f"{host}/api/2.0/mlflow/unity-catalog/model-versions/create"
         headers = {
             "Authorization": f"Bearer {token}", 
             "Content-Type": "application/json"
         }
         
-        # Databricks expects explicit registry routing tags when targeting Unity Catalog 
-        # via the 2.0 endpoint to prevent formatting validation errors.
         payload = {
             "name": registered_model_name,
             "source": f"runs:/{run_id}/model",
-            "run_id": run_id,
-            "tags": [
-                {"key": "mlflow.registry.registry_uri", "value": "databricks-uc"}
-            ]
+            "run_id": run_id
         }
         
         response = requests.post(endpoint, headers=headers, json=payload)
