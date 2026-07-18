@@ -53,24 +53,31 @@ def train_and_track():
             input_example=input_example
         )
 
-        # 3. Handle model registration server-side via direct Unity Catalog REST API
-        logger.info(f"Requesting Databricks to register model server-side in Unity Catalog path: {registered_model_name}")
+        # 3. Handle model registration server-side via direct Databricks REST API
+        logger.info(f"Requesting Databricks to register model version for UC path: {registered_model_name}")
         
         host = os.getenv("DATABRICKS_HOST").rstrip("/")
         token = os.getenv("DATABRICKS_TOKEN")
         
-        # CORRECT ROUTE: The model name belongs in the URL path, not the JSON payload body
-        endpoint = f"{host}/api/2.1/unity-catalog/models/{registered_model_name}/versions"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        # This is the correct universal creation endpoint used by Databricks
+        endpoint = f"{host}/api/2.0/mlflow/model-versions/create"
+        
+        # Pass the X-Databricks-Registry-URI header to force the backend to interpret the name path as Unity Catalog
+        headers = {
+            "Authorization": f"Bearer {token}", 
+            "Content-Type": "application/json",
+            "X-Databricks-Registry-URI": "databricks-uc"
+        }
         
         payload = {
+            "name": registered_model_name,
             "source": f"runs:/{run_id}/model",
             "run_id": run_id
         }
         
         response = requests.post(endpoint, headers=headers, json=payload)
         
-        if response.status_code == 200 or response.status_code == 201:
+        if response.status_code == 200:
             logger.info(f"Success! Registered model version in Unity Catalog: {response.json()}")
         else:
             logger.error(f"Server registration failed: Status {response.status_code}, Error: {response.text}")
