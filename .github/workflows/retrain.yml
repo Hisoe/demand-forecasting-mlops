@@ -55,16 +55,16 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          # 1. Create a mock Databricks config file to force the SDK to activate
+          # 1. Create the configuration profile directory and file
           mkdir -p ~/.databricks
           echo "[DEFAULT]" > ~/.databrickscfg
           echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
           echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
           
-          # 2. Set the routing variable for both MLflow and the SDK
+          # 2. Export the MLflow proxy variable directly to the shell
           export MLFLOW_USE_DATABRICKS_SDK_MODEL_ARTIFACTS_REPO_FOR_UC="True"
           
-          # 3. Execute training
+          # 3. Clean run your standard, native script
           python src/train.py
         
       - name: Build Docker Container
