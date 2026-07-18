@@ -43,8 +43,7 @@ def train_and_track():
         rmse = root_mean_squared_error(y, preds)
         mlflow.log_metric("rmse", rmse)
         
-        # 2. Log the model artifacts to the MLflow Run
-        # This works perfectly over the proxy profile we set up!
+        # 2. Log artifacts to the run ONLY (We stripped registered_model_name here)
         logger.info("Logging model artifacts to the active tracking run...")
         input_example = X.head(5)
         mlflow.xgboost.log_model(
@@ -53,9 +52,7 @@ def train_and_track():
             input_example=input_example
         )
 
-        # 3. Server-Side Registration Bypass
-        # We manually call the Databricks Unity Catalog REST API to link this run
-        # into a new version. This completely avoids MLflow's broken S3 versioning client.
+        # 3. Handle model registration server-side via direct REST API
         logger.info(f"Registering model version server-side via REST API: {registered_model_name}")
         
         host = os.getenv("DATABRICKS_HOST")
