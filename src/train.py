@@ -54,18 +54,16 @@ def train_and_track():
         )
 
         # 3. Handle model registration server-side via direct Unity Catalog REST API
-        logger.info(f"Requesting Databricks to register model server-side in Unity Catalog: {registered_model_name}")
+        logger.info(f"Requesting Databricks to register model server-side in Unity Catalog path: {registered_model_name}")
         
         host = os.getenv("DATABRICKS_HOST").rstrip("/")
         token = os.getenv("DATABRICKS_TOKEN")
         
-        # Target the explicit Unity Catalog model versions endpoint
-        endpoint = f"{host}/api/2.1/unity-catalog/models/versions"
+        # CORRECT ROUTE: The model name belongs in the URL path, not the JSON payload body
+        endpoint = f"{host}/api/2.1/unity-catalog/models/{registered_model_name}/versions"
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         
-        # The exact payload schema accepted by the Unity Catalog 2.1 API
         payload = {
-            "model_name": registered_model_name,  # <-- The missing required key (workspace.default.demand_forecasting_baseline)
             "source": f"runs:/{run_id}/model",
             "run_id": run_id
         }
